@@ -65,12 +65,17 @@ def norm(t: str) -> str:      # simplify for comparison
 def find_image(fert_name: str) -> str | None:
     folder = Path(IMG_FOLDER)
     if not folder.exists():
+        st.error(f"Image folder {IMG_FOLDER} does not exist!")
         return None
 
     # 1) dictionary shortcut
     mapped = FILE_MAP.get(fert_name)
-    if mapped and (folder / mapped).is_file():
-        return str(folder / mapped)
+    if mapped:
+        img_path = folder / mapped
+        if img_path.is_file():
+            return str(img_path)
+        else:
+            st.warning(f"Mapped image {mapped} for {fert_name} not found in {IMG_FOLDER}")
 
     want = norm(fert_name)
     # 2) exact-stem match
@@ -81,6 +86,11 @@ def find_image(fert_name: str) -> str | None:
     for p in folder.iterdir():
         if p.suffix.lower() in ALLOWED and want in norm(p.stem):
             return str(p)
+    
+    # Debug info
+    st.info(f"Looking for image for '{fert_name}', normalized as '{want}'")
+    st.info(f"Available images: {[p.name for p in folder.iterdir() if p.suffix.lower() in ALLOWED]}")
+    
     return None
 
 # ─────── input form ───────────────────────────────────────
