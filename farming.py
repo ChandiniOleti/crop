@@ -60,14 +60,14 @@ with open("crop_recommender.pkl", "rb") as file:
     crop_model = pickle.load(file)
 
 CROP_IMAGES = {
-    "apple": "Images/apple.jpg", "banana": "Images/banana.jpg", "blackgram": "Images/blackgram.jpg",
-    "chickpea": "Images/chickpea.jpg", "coconut": "Images/coconut.jpg", "coffee": "Images/coffee.jpg",
-    "cotton": "Images/cotton.jpg", "grapes": "Images/grapes.jpg", "jute": "Images/jute.jpg",
-    "kidneybeans": "Images/kidneybeans.jpg", "lentil": "Images/lentil.jpg", "maize": "Images/maize.jpg",
-    "mango": "Images/mango.jpg", "mothbeans": "Images/mothbeans.jpg", "mungbean": "Images/mungbean.jpg",
-    "muskmelon": "Images/muskmelon.jpg", "orange": "Images/orange.jpg", "papaya": "Images/papaya.jpg",
-    "pigeonpeas": "Images/pigeonpeas.jpg", "pomegranate": "Images/pomegranate.jpg",
-    "rice": "Images/rice.jpg", "watermelon": "Images/watermelon.jpg"
+    "apple": "images/apple.jpg", "banana": "images/banana.jpg", "blackgram": "images/blackgram.jpg",
+    "chickpea": "images/chickpea.jpg", "coconut": "images/coconut.jpg", "coffee": "images/coffee.jpg",
+    "cotton": "images/cotton.jpg", "grapes": "images/grapes.jpg", "jute": "images/jute.jpg",
+    "kidneybeans": "images/kidneybeans.jpg", "lentil": "images/lentil.jpg", "maize": "images/maize.jpg",
+    "mango": "images/mango.jpg", "mothbeans": "images/mothbeans.jpg", "mungbean": "images/mungbean.jpg",
+    "muskmelon": "images/muskmelon.jpg", "orange": "images/orange.jpg", "papaya": "images/papaya.jpg",
+    "pigeonpeas": "images/pigeonpeas.jpg", "pomegranate": "images/pomegranate.jpg",
+    "rice": "images/rice.jpg", "watermelon": "images/watermelon.jpg"
 }
 
 # Fertilizer Setup
@@ -81,6 +81,10 @@ FERT_DESC = {
     "Urea": "Supplies **46 % Nitrogen**. Broadcast close to the root zone.",
     "DAP": "18-46-0. Boosts early root growth; keep seed 5 cm away.",
     "20-20": "Balanced N-P for vegetative stage; add K if soil test is low.",
+    "10-26-26": "Provides **10% nitrogen**, **26% phosphorus**, and **26% potassium**. Recommended for flowering and fruiting stages.",
+    "14-35-14": "High phosphorus content aids in root development. Suitable for crops at early growth stages.",
+    "17-17-17": "All-round fertilizer for general use. Promotes balanced plant development.",
+    "28-28": "Rich in nitrogen and phosphorus. Encourages vigorous growth and yield improvement."
 }
 
 def norm(t):
@@ -89,17 +93,32 @@ def norm(t):
 def find_image(fert_name):
     folder = Path(IMG_FOLDER)
     if not folder.exists():
+        st.error(f"Image folder {IMG_FOLDER} does not exist!")
         return None
+
+    # 1) dictionary shortcut
     mapped = FILE_MAP.get(fert_name)
-    if mapped and (folder / mapped).is_file():
-        return str(folder / mapped)
+    if mapped:
+        img_path = folder / mapped
+        if img_path.is_file():
+            return str(img_path)
+        else:
+            st.warning(f"Mapped image {mapped} for {fert_name} not found in {IMG_FOLDER}")
+
     want = norm(fert_name)
+    # 2) exact-stem match
     for p in folder.iterdir():
         if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and norm(p.stem) == want:
             return str(p)
+    # 3) substring match
     for p in folder.iterdir():
         if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and want in norm(p.stem):
             return str(p)
+    
+    # Debug info
+    st.info(f"Looking for image for '{fert_name}', normalized as '{want}'")
+    st.info(f"Available images: {[p.name for p in folder.iterdir() if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp')]}")
+    
     return None
 
 API_KEY = "1a87e7efe6b61b3c5eb08d8042345272"
@@ -259,7 +278,10 @@ elif page == "🧪 Fertilizer Recommendation":
                 f"<img src='data:image/jpeg;base64,{enc}' width='260' style='border-radius:8px;border:2px solid #333'/></p>",
                 unsafe_allow_html=True)
         else:
-            st.warning(f"🚫 No image found for **{fert}**. Add one to the *{IMG_FOLDER}/* folder.")
+            existing = [p.name for p in Path(IMG_FOLDER).iterdir() 
+                      if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")] if Path(IMG_FOLDER).exists() else []
+            st.warning(f"🚫 No image found for **{fert}**. Add one to the *{IMG_FOLDER}/* folder or update FILE_MAP.\n\n"
+                      f"**Available images:** {', '.join(existing) or '— none —'}")
         st.markdown("#### Description")
         st.markdown(FERTILIZER_DESCRIPTIONS.get(fert, "_No description available._"), unsafe_allow_html=True)
 
