@@ -15,6 +15,18 @@ from utils.fertilizer_desc import FERTILIZER_DESCRIPTIONS
 CSV_PATH   = "Fertilizer_recommendation.csv"
 IMG_FOLDER = "images"          # folder that contains 1.jpg, f1.webp, core.jpg …
 
+# Define a function to get the absolute path to the images directory
+def get_image_path(filename):
+    # First try relative to current file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    img_path = os.path.join(current_dir, "images", filename)
+    
+    # If that doesn't exist, try relative to current working directory
+    if not os.path.exists(img_path):
+        img_path = os.path.join("images", filename)
+    
+    return img_path
+
 # ─────── 1.  EDIT THIS ONCE  –  map fertiliser → filename ─
 FILE_MAP = {
     # 'CSV-name' : 'your_image_file'
@@ -134,38 +146,41 @@ if go:
     st.success(f"### Recommended Fertilizer → **{fert}**")
 
     # ─── show picture
-    img_path = find_image(fert)
-    if img_path:
+    # Get the mapped filename for this fertilizer
+    mapped_filename = FILE_MAP.get(fert)
+    
+    if mapped_filename:
+        # First try the simplest approach - let Streamlit handle the path
         try:
-            # Try to open and display the image using base64 encoding
-            with open(img_path, "rb") as f:
-                enc = base64.b64encode(f.read()).decode()
-            st.markdown(
-                f"<p style='text-align:center'>"
-                f"<img src='data:image/jpeg;base64,{enc}' width='260'"
-                f" style='border-radius:8px;border:2px solid #333'/></p>",
-                unsafe_allow_html=True)
-        except Exception as e:
-            # If that fails, try using Streamlit's native image display
+            st.image(f"images/{mapped_filename}", width=260, caption=fert)
+        except Exception as e1:
+            # If that fails, try with our helper function
             try:
-                st.image(img_path, width=260, caption=fert)
+                img_path = get_image_path(mapped_filename)
+                if os.path.exists(img_path):
+                    # Try to open and display the image using base64 encoding
+                    with open(img_path, "rb") as f:
+                        enc = base64.b64encode(f.read()).decode()
+                    st.markdown(
+                        f"<p style='text-align:center'>"
+                        f"<img src='data:image/jpeg;base64,{enc}' width='260'"
+                        f" style='border-radius:8px;border:2px solid #333'/></p>",
+                        unsafe_allow_html=True)
+                else:
+                    st.error(f"Image file not found at {img_path}")
             except Exception as e2:
-                st.warning(f"🚫 Error displaying image: {str(e2)}")
+                # Last resort - try to find any image with a similar name
+                try:
+                    # List all image files in the images directory to help debug
+                    img_dir = Path("images")
+                    if img_dir.exists():
+                        st.error(f"Image {mapped_filename} not found. Available images: {[f.name for f in img_dir.glob('*.*')[:5]]}...")
+                    else:
+                        st.error("Images directory not found!")
+                except Exception as e3:
+                    st.error(f"🚫 Failed to load image: {str(e3)}")
     else:
-        # Try one more approach - direct path for Streamlit Cloud
-        direct_path = os.path.join(IMG_FOLDER, f"{norm(fert)}.jpg")
-        try:
-            st.image(direct_path, width=260, caption=fert)
-        except Exception:
-            # If all approaches fail, show the warning
-            folder = Path(IMG_FOLDER)
-            if not folder.exists():
-                folder = Path(os.path.dirname(os.path.abspath(__file__))) / IMG_FOLDER
-            
-            existing = [p.name for p in folder.iterdir() 
-                        if p.suffix.lower() in ALLOWED] if folder.exists() else []
-            st.warning("🚫 No image found for **{0}**. "
-                      "Add one to the *{1}/* folder or update FILE_MAP.".format(fert, IMG_FOLDER))
+        st.warning(f"🚫 No image mapping found for fertilizer: {fert}")
 
     # ─── description
     st.markdown("#### Description")

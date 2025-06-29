@@ -83,15 +83,27 @@ def predict_disease(image_bytes):
 with open("crop_recommender.pkl", "rb") as file:
     crop_model = pickle.load(file)
 
+# Define a function to get the absolute path to the images directory
+def get_image_path(filename):
+    # First try relative to current file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    img_path = os.path.join(current_dir, "images", filename)
+    
+    # If that doesn't exist, try relative to current working directory
+    if not os.path.exists(img_path):
+        img_path = os.path.join("images", filename)
+    
+    return img_path
+
 CROP_IMAGES = {
-    "apple": "images/apple.jpg", "banana": "images/banana.jpg", "blackgram": "images/blackgram.jpg",
-    "chickpea": "images/chickpea.jpg", "coconut": "images/coconut.jpg", "coffee": "images/coffee.jpg",
-    "cotton": "images/cotton.jpg", "grapes": "images/grapes.jpg", "jute": "images/jute.jpg",
-    "kidneybeans": "images/kidneybeans.jpg", "lentil": "images/lentil.jpg", "maize": "images/maize.jpg",
-    "mango": "images/mango.jpg", "mothbeans": "images/mothbeans.jpg", "mungbean": "images/mungbean.jpg",
-    "muskmelon": "images/muskmelon.jpg", "orange": "images/orange.jpg", "papaya": "images/papaya.jpg",
-    "pigeonpeas": "images/pigeonpeas.jpg", "pomegranate": "images/pomegranate.jpg",
-    "rice": "images/rice.jpg", "watermelon": "images/watermelon.jpg"
+    "apple": "apple.jpg", "banana": "banana.jpg", "blackgram": "blackgram.jpg",
+    "chickpea": "chickpea.jpg", "coconut": "coconut.jpg", "coffee": "coffee.jpg",
+    "cotton": "cotton.jpg", "grapes": "grapes.jpg", "jute": "jute.jpg",
+    "kidneybeans": "kidneybeans.jpg", "lentil": "lentil.jpg", "maize": "maize.jpg",
+    "mango": "mango.jpg", "mothbeans": "mothbeans.jpg", "mungbean": "mungbean.jpg",
+    "muskmelon": "muskmelon.jpg", "orange": "orange.jpg", "papaya": "papaya.jpg",
+    "pigeonpeas": "pigeonpeas.jpg", "pomegranate": "pomegranate.jpg",
+    "rice": "rice.jpg", "watermelon": "watermelon.jpg"
 }
 
 # Fertilizer Setup
@@ -585,27 +597,31 @@ elif page == "🌾 Crop Recommendation":
                                   columns=["N", "P", "K", "temperature", "humidity", "ph", "rainfall"])
         prediction = crop_model.predict(input_data)[0]
         st.success(f"✅ Recommended Crop for {city or 'your region'} is: **{prediction.capitalize()}**")
-        image_path = CROP_IMAGES.get(prediction.lower())
+        image_filename = CROP_IMAGES.get(prediction.lower())
         
-        # Try multiple approaches to find the image
-        if image_path:
-            # First try direct path
-            if os.path.exists(image_path):
-                st.image(Image.open(image_path), caption=prediction.capitalize(), width=250)
-            else:
-                # Try with current directory
-                current_dir = os.path.dirname(os.path.abspath(__file__))
-                alt_path = os.path.join(current_dir, image_path)
-                if os.path.exists(alt_path):
-                    st.image(Image.open(alt_path), caption=prediction.capitalize(), width=250)
-                else:
-                    # Try to load directly with Streamlit (which has special handling for paths)
-                    try:
-                        st.image(image_path, caption=prediction.capitalize(), width=250)
-                    except Exception:
-                        st.warning("🚫 Image not available.")
+        if image_filename:
+            try:
+                # Use the streamlit method to directly load from the images folder
+                st.image(f"images/{image_filename}", caption=prediction.capitalize(), width=250)
+            except Exception as e1:
+                try:
+                    # Try with our helper function
+                    image_path = get_image_path(image_filename)
+                    if os.path.exists(image_path):
+                        st.image(Image.open(image_path), caption=prediction.capitalize(), width=250)
+                    else:
+                        # Last resort - try to load directly from the images directory
+                        from pathlib import Path
+                        # List all image files in the images directory to help debug
+                        img_dir = Path("images")
+                        if img_dir.exists():
+                            st.error(f"Image {image_filename} not found. Available images: {[f.name for f in img_dir.glob('*.jpg')[:5]]}...")
+                        else:
+                            st.error("Images directory not found!")
+                except Exception as e2:
+                    st.error(f"🚫 Failed to load image: {str(e2)}")
         else:
-            st.warning("🚫 Image not available for this crop.")
+            st.warning("🚫 No image available for this crop.")
 
 elif page == "🌿 Plant Disease Detection":
     st.title("🔍 Upload Leaf Image for Disease Detection")
