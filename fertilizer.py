@@ -17,14 +17,19 @@ IMG_FOLDER = "images"          # folder that contains 1.jpg, f1.webp, core.jpg �
 
 # Define a function to get the absolute path to the images directory
 def get_image_path(filename):
-    # First try relative to current file
+    # First try in the static folder (for Streamlit Cloud)
+    static_path = os.path.join("static", filename)
+    if os.path.exists(static_path):
+        return static_path
+    
+    # Then try relative to current file in images folder
     current_dir = os.path.dirname(os.path.abspath(__file__))
     img_path = os.path.join(current_dir, "images", filename)
+    if os.path.exists(img_path):
+        return img_path
     
-    # If that doesn't exist, try relative to current working directory
-    if not os.path.exists(img_path):
-        img_path = os.path.join("images", filename)
-    
+    # Last try in images folder
+    img_path = os.path.join("images", filename)
     return img_path
 
 # ─────── 1.  EDIT THIS ONCE  –  map fertiliser → filename ─
@@ -150,9 +155,9 @@ if go:
     mapped_filename = FILE_MAP.get(fert)
     
     if mapped_filename:
-        # First try the simplest approach - let Streamlit handle the path
+        # First try to load from static folder (for Streamlit Cloud)
         try:
-            st.image(f"images/{mapped_filename}", width=260, caption=fert)
+            st.image(f"static/{mapped_filename}", width=260, caption=fert)
         except Exception as e1:
             # If that fails, try with our helper function
             try:
@@ -167,18 +172,22 @@ if go:
                         f" style='border-radius:8px;border:2px solid #333'/></p>",
                         unsafe_allow_html=True)
                 else:
-                    st.error(f"Image file not found at {img_path}")
+                    # Try one more approach - direct path
+                    try:
+                        st.image(f"images/{mapped_filename}", width=260, caption=fert)
+                    except Exception:
+                        # List available images to help debug
+                        img_dir = Path("static")
+                        if img_dir.exists():
+                            st.error(f"Image {mapped_filename} not found in static. Available images: {[f.name for f in img_dir.glob('*.*')[:5]]}...")
+                        else:
+                            img_dir = Path("images")
+                            if img_dir.exists():
+                                st.error(f"Image {mapped_filename} not found in images. Available images: {[f.name for f in img_dir.glob('*.*')[:5]]}...")
+                            else:
+                                st.error("Neither static nor images directory found!")
             except Exception as e2:
-                # Last resort - try to find any image with a similar name
-                try:
-                    # List all image files in the images directory to help debug
-                    img_dir = Path("images")
-                    if img_dir.exists():
-                        st.error(f"Image {mapped_filename} not found. Available images: {[f.name for f in img_dir.glob('*.*')[:5]]}...")
-                    else:
-                        st.error("Images directory not found!")
-                except Exception as e3:
-                    st.error(f"🚫 Failed to load image: {str(e3)}")
+                st.error(f"🚫 Failed to load image: {str(e2)}")
     else:
         st.warning(f"🚫 No image mapping found for fertilizer: {fert}")
 

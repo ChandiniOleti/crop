@@ -85,14 +85,19 @@ with open("crop_recommender.pkl", "rb") as file:
 
 # Define a function to get the absolute path to the images directory
 def get_image_path(filename):
-    # First try relative to current file
+    # First try in the static folder (for Streamlit Cloud)
+    static_path = os.path.join("static", filename)
+    if os.path.exists(static_path):
+        return static_path
+    
+    # Then try relative to current file in images folder
     current_dir = os.path.dirname(os.path.abspath(__file__))
     img_path = os.path.join(current_dir, "images", filename)
+    if os.path.exists(img_path):
+        return img_path
     
-    # If that doesn't exist, try relative to current working directory
-    if not os.path.exists(img_path):
-        img_path = os.path.join("images", filename)
-    
+    # Last try in images folder
+    img_path = os.path.join("images", filename)
     return img_path
 
 CROP_IMAGES = {
@@ -601,8 +606,8 @@ elif page == "🌾 Crop Recommendation":
         
         if image_filename:
             try:
-                # Use the streamlit method to directly load from the images folder
-                st.image(f"images/{image_filename}", caption=prediction.capitalize(), width=250)
+                # First try to load from static folder (for Streamlit Cloud)
+                st.image(f"static/{image_filename}", caption=prediction.capitalize(), width=250)
             except Exception as e1:
                 try:
                     # Try with our helper function
@@ -610,14 +615,21 @@ elif page == "🌾 Crop Recommendation":
                     if os.path.exists(image_path):
                         st.image(Image.open(image_path), caption=prediction.capitalize(), width=250)
                     else:
-                        # Last resort - try to load directly from the images directory
-                        from pathlib import Path
-                        # List all image files in the images directory to help debug
-                        img_dir = Path("images")
-                        if img_dir.exists():
-                            st.error(f"Image {image_filename} not found. Available images: {[f.name for f in img_dir.glob('*.jpg')[:5]]}...")
-                        else:
-                            st.error("Images directory not found!")
+                        # Try one more approach - direct path
+                        try:
+                            st.image(f"images/{image_filename}", caption=prediction.capitalize(), width=250)
+                        except Exception:
+                            # List available images to help debug
+                            from pathlib import Path
+                            img_dir = Path("static")
+                            if img_dir.exists():
+                                st.error(f"Image {image_filename} not found. Available images: {[f.name for f in img_dir.glob('*.jpg')[:5]]}...")
+                            else:
+                                img_dir = Path("images")
+                                if img_dir.exists():
+                                    st.error(f"Image {image_filename} not found. Available images: {[f.name for f in img_dir.glob('*.jpg')[:5]]}...")
+                                else:
+                                    st.error("Neither static nor images directory found!")
                 except Exception as e2:
                     st.error(f"🚫 Failed to load image: {str(e2)}")
         else:
