@@ -65,19 +65,8 @@ def predict_disease(image_bytes):
     img_t = transform(image)
     img_u = torch.unsqueeze(img_t, 0)
     yb = disease_model(img_u)
-    
-    # Get probabilities using softmax
-    probabilities = F.softmax(yb[0], dim=0)
-    
-    # Get the highest probability and its index
-    confidence, preds = torch.max(probabilities, dim=0)
-    
-    # Return the prediction only if confidence is above threshold
-    # Otherwise return None to indicate it's not a valid plant leaf
-    if confidence.item() > 0.70:  # 70% confidence threshold
-        return disease_classes[preds.item()], confidence.item()
-    else:
-        return None, confidence.item()
+    _, preds = torch.max(yb, dim=1)
+    return disease_classes[preds[0].item()]
 
 # Load Crop Recommender Model
 with open("crop_recommender.pkl", "rb") as file:
@@ -635,28 +624,31 @@ elif page == "🌾 Crop Recommendation":
         else:
             st.warning("🚫 No image available for this crop.")
 
+# Disease Detection Page
 elif page == "🌿 Plant Disease Detection":
     st.title("🔍 Upload Leaf Image for Disease Detection")
-    uploaded_file = st.file_uploader("📷 upload image", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📷 Upload a leaf image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file:
         col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(uploaded_file, caption="home.jpeg", width=250)
+            st.image(uploaded_file, caption="Uploaded Leaf", width=250)
         with col2:
             with st.spinner("🧠 Analyzing..."):
                 img_bytes = uploaded_file.read()
                 result = predict_disease(img_bytes)
                 advice = disease_dic.get(result, "No specific advice available.")
-            st.success(f"🧪 Prediction: {result}")
+            st.success(f"🤪 Prediction: **{result.replace('_', ' ')}**")
             st.markdown(f"""
                 <div style='background-color:#f1f3f4;padding:20px;border-radius:10px;margin-top:20px;'>
-                    <h4>💡 Recommendation</h4>
-                    <div style='color:#333;font-size:16px;line-height:1.6;text-align:justify;max-height:400px;overflow-y:auto;'>
+                    <h4 style='color:black;'>💡 Recommendation</h4>
+                    <div style='color:black;font-size:16px;line-height:1.6;text-align:justify;max-height:400px;overflow-y:auto;'>
                         {advice}
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+    else:
+        st.info("📸 Please upload a clear leaf image to detect the disease.")
 
 elif page == "🧪 Fertilizer Recommendation":
     st.title("🧪 Smart Fertilizer Recommendation")
