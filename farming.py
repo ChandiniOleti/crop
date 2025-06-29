@@ -636,60 +636,27 @@ elif page == "🌾 Crop Recommendation":
             st.warning("🚫 No image available for this crop.")
 
 elif page == "🌿 Plant Disease Detection":
-    from PIL import Image
-    from torchvision import transforms
-    import torch
-
     st.title("🔍 Upload Leaf Image for Disease Detection")
-    uploaded_file = st.file_uploader("📷 Upload a clear image of a plant leaf", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("📷 upload image", type=["jpg", "jpeg", "png"])
 
     if uploaded_file:
         col1, col2 = st.columns([1, 2])
         with col1:
-            st.image(uploaded_file, caption="Uploaded Image", width=250)
-
+            st.image(uploaded_file, caption="home.jpeg", width=250)
         with col2:
             with st.spinner("🧠 Analyzing..."):
-                try:
-                    # Open image and convert to RGB
-                    image = Image.open(uploaded_file).convert("RGB")
-
-                    # Define the same transform used during model training
-                    transform = transforms.Compose([
-                        transforms.Resize((224, 224)),
-                        transforms.ToTensor(),
-                        transforms.Normalize(
-                            mean=[0.485, 0.456, 0.406],
-                            std=[0.229, 0.224, 0.225]
-                        )
-                    ])
-                    img_tensor = transform(image).unsqueeze(0)  # Add batch dimension
-
-                    # Predict using your model
-                    with torch.no_grad():
-                        outputs = model(img_tensor)
-                        confidence, predicted_idx = torch.max(torch.nn.functional.softmax(outputs, dim=1), 1)
-                        predicted_class = classes[predicted_idx.item()]  # from your disease classes list
-
-                    # Show result
-                    st.success(f"🧪 Prediction: {predicted_class}")
-                    st.info(f"Confidence level: {confidence.item()*100:.2f}%")
-
-                    # Show advice
-                    advice = disease_dic.get(predicted_class, "No specific advice available.")
-                    st.markdown(f"""
-                        <div style='background-color:#f1f3f4;padding:20px;border-radius:10px;margin-top:20px;'>
-                            <h4 style='color:#000000;'>💡 Recommendation</h4>
-                            <div style='color:#000000;font-size:16px;line-height:1.6;text-align:justify;max-height:400px;overflow-y:auto;'>
-                                {advice}
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                except Exception as e:
-                    st.error("❌ Unable to process the image. Please upload a valid leaf image.")
-                    st.exception(e)
-
+                img_bytes = uploaded_file.read()
+                result = predict_disease(img_bytes)
+                advice = disease_dic.get(result, "No specific advice available.")
+            st.success(f"🧪 Prediction: {result}")
+            st.markdown(f"""
+                <div style='background-color:#f1f3f4;padding:20px;border-radius:10px;margin-top:20px;'>
+                    <h4>💡 Recommendation</h4>
+                    <div style='color:#333;font-size:16px;line-height:1.6;text-align:justify;max-height:400px;overflow-y:auto;'>
+                        {advice}
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
 
 elif page == "🧪 Fertilizer Recommendation":
     st.title("🧪 Smart Fertilizer Recommendation")
