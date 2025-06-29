@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import base64, os
 from pathlib import Path
+from utils.fertilizer_desc import FERTILIZER_DESCRIPTIONS
 
 # ─────── PATHS ────────────────────────────────────────────
 CSV_PATH   = "Fertilizer_recommendation.csv"
@@ -25,12 +26,8 @@ FILE_MAP = {
     "17-17-17"  : "2.jpg",
     "28-28"     : "fertilizer.jpg",
 }
-# ─────── 2.  optional descriptions (edit / extend) ───────
-FERT_DESC = {
-    "Urea":  "Supplies **46 % Nitrogen**. Broadcast close to the root zone.",
-    "DAP":   "18-46-0. Boosts early root growth; keep seed 5 cm away.",
-    "20-20": "Balanced N-P for vegetative stage; add K if soil test is low.",
-}
+# ─────── 2. Using detailed descriptions from utils/fertilizer_desc.py ───────
+# FERTILIZER_DESCRIPTIONS is imported from utils.fertilizer_desc
 
 # ─────── UI setup ─────────────────────────────────────────
 st.set_page_config(page_title="Fertilizer Recommender",
@@ -143,5 +140,5 @@ if go:
 
     # ─── description
     st.markdown("#### Description")
-    st.markdown(FERT_DESC.get(fert, "_No description yet – add it in `FERT_DESC`._"),
+    st.markdown(FERTILIZER_DESCRIPTIONS.get(fert, "_No description yet – add it in `utils/fertilizer_desc.py`._"),
                 unsafe_allow_html=True)
