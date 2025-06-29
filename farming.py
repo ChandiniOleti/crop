@@ -109,9 +109,15 @@ def norm(t):
 
 def find_image(fert_name):
     folder = Path(IMG_FOLDER)
+    
+    # For Streamlit Cloud compatibility
     if not folder.exists():
-        st.error(f"Image folder {IMG_FOLDER} does not exist!")
-        return None
+        # Try to create the path relative to the current directory
+        current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        folder = current_dir / IMG_FOLDER
+        if not folder.exists():
+            st.error(f"Image folder {IMG_FOLDER} does not exist!")
+            return None
 
     # 1) dictionary shortcut
     mapped = FILE_MAP.get(fert_name)
@@ -120,7 +126,11 @@ def find_image(fert_name):
         if img_path.is_file():
             return str(img_path)
         else:
-            st.warning(f"Mapped image {mapped} for {fert_name} not found in {IMG_FOLDER}")
+            # Try direct path for Streamlit Cloud
+            direct_path = os.path.join(IMG_FOLDER, mapped)
+            if os.path.exists(direct_path):
+                return direct_path
+            st.warning(f"Mapped image {mapped} for {fert_name} not found")
 
     want = norm(fert_name)
     # 2) exact-stem match
@@ -134,7 +144,6 @@ def find_image(fert_name):
     
     # Debug info
     st.info(f"Looking for image for '{fert_name}', normalized as '{want}'")
-    st.info(f"Available images: {[p.name for p in folder.iterdir() if p.suffix.lower() in ('.jpg', '.jpeg', '.png', '.webp')]}")
     
     return None
 
@@ -577,10 +586,26 @@ elif page == "🌾 Crop Recommendation":
         prediction = crop_model.predict(input_data)[0]
         st.success(f"✅ Recommended Crop for {city or 'your region'} is: **{prediction.capitalize()}**")
         image_path = CROP_IMAGES.get(prediction.lower())
-        if image_path and os.path.exists(image_path):
-            st.image(Image.open(image_path), caption=prediction.capitalize(), width=250)
+        
+        # Try multiple approaches to find the image
+        if image_path:
+            # First try direct path
+            if os.path.exists(image_path):
+                st.image(Image.open(image_path), caption=prediction.capitalize(), width=250)
+            else:
+                # Try with current directory
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                alt_path = os.path.join(current_dir, image_path)
+                if os.path.exists(alt_path):
+                    st.image(Image.open(alt_path), caption=prediction.capitalize(), width=250)
+                else:
+                    # Try to load directly with Streamlit (which has special handling for paths)
+                    try:
+                        st.image(image_path, caption=prediction.capitalize(), width=250)
+                    except Exception:
+                        st.warning("🚫 Image not available.")
         else:
-            st.warning("🚫 Image not available.")
+            st.warning("🚫 Image not available for this crop.")
 
 elif page == "🌿 Plant Disease Detection":
     st.title("🔍 Upload Leaf Image for Disease Detection")

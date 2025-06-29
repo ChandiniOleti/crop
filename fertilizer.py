@@ -61,18 +61,32 @@ def norm(t: str) -> str:      # simplify for comparison
 
 def find_image(fert_name: str) -> str | None:
     folder = Path(IMG_FOLDER)
+    
+    # For Streamlit Cloud compatibility
     if not folder.exists():
-        st.error(f"Image folder {IMG_FOLDER} does not exist!")
-        return None
+        # Try to create the path relative to the current directory
+        current_dir = Path(os.path.dirname(os.path.abspath(__file__)))
+        folder = current_dir / IMG_FOLDER
+        if not folder.exists():
+            st.error(f"Image folder {IMG_FOLDER} does not exist!")
+            return None
 
     # 1) dictionary shortcut
     mapped = FILE_MAP.get(fert_name)
     if mapped:
+        # Try multiple paths for Streamlit Cloud compatibility
+        # First try the standard path
         img_path = folder / mapped
         if img_path.is_file():
             return str(img_path)
-        else:
-            st.warning(f"Mapped image {mapped} for {fert_name} not found in {IMG_FOLDER}")
+        
+        # Try direct path
+        direct_path = os.path.join(IMG_FOLDER, mapped)
+        if os.path.exists(direct_path):
+            return direct_path
+            
+        # If we get here, the mapped file wasn't found
+        st.warning(f"Mapped image {mapped} for {fert_name} not found")
 
     want = norm(fert_name)
     # 2) exact-stem match
@@ -86,7 +100,6 @@ def find_image(fert_name: str) -> str | None:
     
     # Debug info
     st.info(f"Looking for image for '{fert_name}', normalized as '{want}'")
-    st.info(f"Available images: {[p.name for p in folder.iterdir() if p.suffix.lower() in ALLOWED]}")
     
     return None
 
@@ -123,20 +136,36 @@ if go:
     # ─── show picture
     img_path = find_image(fert)
     if img_path:
-        with open(img_path, "rb") as f:
-            enc = base64.b64encode(f.read()).decode()
-        st.markdown(
-            f"<p style='text-align:center'>"
-            f"<img src='data:image/jpeg;base64,{enc}' width='260'"
-            f" style='border-radius:8px;border:2px solid #333'/></p>",
-            unsafe_allow_html=True)
+        try:
+            # Try to open and display the image using base64 encoding
+            with open(img_path, "rb") as f:
+                enc = base64.b64encode(f.read()).decode()
+            st.markdown(
+                f"<p style='text-align:center'>"
+                f"<img src='data:image/jpeg;base64,{enc}' width='260'"
+                f" style='border-radius:8px;border:2px solid #333'/></p>",
+                unsafe_allow_html=True)
+        except Exception as e:
+            # If that fails, try using Streamlit's native image display
+            try:
+                st.image(img_path, width=260, caption=fert)
+            except Exception as e2:
+                st.warning(f"🚫 Error displaying image: {str(e2)}")
     else:
-        existing = [p.name for p in Path(IMG_FOLDER).iterdir()
-                    if p.suffix.lower() in ALLOWED] if Path(IMG_FOLDER).exists() else []
-        st.warning("🚫 No image found for **{0}**. "
-                   "Add one to the *{1}/* folder or update FILE_MAP.\n\n"
-                   "**Seen files:** {2}".format(fert, IMG_FOLDER,
-                     ', '.join(existing) or '— none —'))
+        # Try one more approach - direct path for Streamlit Cloud
+        direct_path = os.path.join(IMG_FOLDER, f"{norm(fert)}.jpg")
+        try:
+            st.image(direct_path, width=260, caption=fert)
+        except Exception:
+            # If all approaches fail, show the warning
+            folder = Path(IMG_FOLDER)
+            if not folder.exists():
+                folder = Path(os.path.dirname(os.path.abspath(__file__))) / IMG_FOLDER
+            
+            existing = [p.name for p in folder.iterdir() 
+                        if p.suffix.lower() in ALLOWED] if folder.exists() else []
+            st.warning("🚫 No image found for **{0}**. "
+                      "Add one to the *{1}/* folder or update FILE_MAP.".format(fert, IMG_FOLDER))
 
     # ─── description
     st.markdown("#### Description")
