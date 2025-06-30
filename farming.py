@@ -781,4 +781,7 @@ elif page == "ℹ️ About":
     4. **N. Vasavi** (22BQ1A42A3)  
        📧 22BQ1A42A3@vvit.net  
     
-    ---Thank You---
+    ---
+    
+    ### 🙏 Thank You
+    """, unsafe_allow_html=True)
