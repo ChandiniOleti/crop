@@ -686,19 +686,7 @@ elif page == "🧪 Fertilizer Recommendation":
             axis=1)
         fert = subset.sort_values("dist").iloc[0]["Fertilizer Name"]
         st.success(f"### Recommended Fertilizer → **{fert}**")
-        img_path = find_image(fert)
-        if img_path:
-            with open(img_path, "rb") as f:
-                enc = base64.b64encode(f.read()).decode()
-            st.markdown(
-                f"<p style='text-align:center'>"
-                f"<img src='data:image/jpeg;base64,{enc}' width='260' style='border-radius:8px;border:2px solid #333'/></p>",
-                unsafe_allow_html=True)
-        else:
-            existing = [p.name for p in Path(IMG_FOLDER).iterdir() 
-                      if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")] if Path(IMG_FOLDER).exists() else []
-            st.warning(f"🚫 No image found for **{fert}**. Add one to the *{IMG_FOLDER}/* folder or update FILE_MAP.\n\n"
-                      f"**Available images:** {', '.join(existing) or '— none —'}")
+        # Removed image display section to avoid issues on Streamlit Cloud
         st.markdown("#### Description")
         st.markdown(FERTILIZER_DESCRIPTIONS.get(fert, "_No description available._"), unsafe_allow_html=True)
 
@@ -793,12 +781,4 @@ elif page == "ℹ️ About":
     4. **N. Vasavi** (22BQ1A42A3)  
        📧 22BQ1A42A3@vvit.net  
     
-    ---
-    
-    ### 📚 References and Resources
-    
-    - Plant disease dataset: PlantVillage
-    - Weather data: OpenWeatherMap API
-    - Fertilizer recommendations: Agricultural research publications
-    - Crop recommendation dataset: Kaggle
-    """, unsafe_allow_html=True)
+    ---Thank You---
